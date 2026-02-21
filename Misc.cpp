@@ -3,12 +3,28 @@
 // Authors: Patrick Brosi <brosi@informatik.uni-freiburg.de>
 
 #include "./Misc.h"
-
 #include <fcntl.h>
-#include <pwd.h>
-#include <stdio.h>
-#include <unistd.h>
 
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MEAN
+  #endif
+  #ifndef NOMINMAX
+  #define NOMINMAX
+  #endif
+  #include <windows.h>
+  #include <psapi.h>
+  #include <io.h>
+  #include <sys/types.h>
+  #include <sys/stat.h>
+#else
+  #include <unistd.h>
+  #include <pwd.h>
+  #include <sys/types.h>
+  #include <sys/stat.h>
+#endif
+
+#include <stdio.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -18,6 +34,7 @@
 
 #include "3rdparty/fmt/core.h"
 #include "String.h"
+
 
 // cached first 10 powers of 10
 static int util_first_10_pow_10[10] = {1,      10,      100,      1000,      10000,
@@ -114,19 +131,55 @@ double util::atof(const char* p, uint8_t mn) {
 }
 
 // _____________________________________________________________________________
-ssize_t util::preadAll(int file, unsigned char* buf, size_t count,
-                       size_t offset) {
-  ssize_t r;
-  ssize_t rem = count;
+#ifndef _WIN32
 
-  while ((r = pread(file, buf + (count - rem), rem, offset))) {
-    if (r < 0) return -1;
+ssize_t util::preadAll(int file, unsigned char* buf, size_t count, size_t offset) {
+  ssize_t rem = (ssize_t)count;
+  while (rem > 0) {
+    ssize_t r = ::pread(file, buf + (count - rem), rem, (off_t)offset);
+    if (r <= 0) return -1;
     rem -= r;
-    offset += r;
+    offset += (size_t)r;
   }
-
-  return count - rem;
+  return (ssize_t)count;
 }
+
+ssize_t util::pwriteAll(int file, const unsigned char* buf, size_t count, size_t offset) {
+  ssize_t rem = (ssize_t)count;
+  while (rem > 0) {
+    ssize_t r = ::pwrite(file, buf + (count - rem), rem, (off_t)offset);
+    if (r <= 0) return -1;
+    rem -= r;
+    offset += (size_t)r;
+  }
+  return (ssize_t)count;
+}
+
+#else // _WIN32
+
+ssize_t util::preadAll(int file, unsigned char* buf, size_t count, size_t offset) {
+  if (_lseeki64(file, (long long)offset, SEEK_SET) == -1) return -1;
+  ssize_t total = 0;
+  while (total < (ssize_t)count) {
+    int r = _read(file, reinterpret_cast<char*>(buf) + total, (unsigned int)(count - total));
+    if (r <= 0) return (total == 0) ? r : total;
+    total += r;
+  }
+  return total;
+}
+
+ssize_t util::pwriteAll(int file, const unsigned char* buf, size_t count, size_t offset) {
+  if (_lseeki64(file, (long long)offset, SEEK_SET) == -1) return -1;
+  ssize_t total = 0;
+  while (total < (ssize_t)count) {
+    int r = _write(file, reinterpret_cast<const char*>(buf) + total, (unsigned int)(count - total));
+    if (r <= 0) return (total == 0) ? r : total;
+    total += r;
+  }
+  return total;
+}
+
+#endif
 
 // _____________________________________________________________________________
 #ifdef PBUTIL_ZLIB_FOUND
@@ -174,21 +227,6 @@ ssize_t util::readAll(int file, unsigned char* buf, size_t count) {
 }
 
 // _____________________________________________________________________________
-ssize_t util::pwriteAll(int file, const unsigned char* buf, size_t count,
-                        size_t offset) {
-  ssize_t r;
-  ssize_t rem = count;
-
-  while ((r = pwrite(file, buf + (count - rem), rem, offset))) {
-    if (r < 0) return -1;
-    rem -= r;
-    offset += r;
-  }
-
-  return count - rem;
-}
-
-// _____________________________________________________________________________
 ssize_t util::writeAll(int file, const unsigned char* buf, size_t count) {
   ssize_t r;
   ssize_t rem = count;
@@ -205,6 +243,15 @@ double util::atof(const char* p) { return atof(p, 38); }
 
 // _____________________________________________________________________________
 std::string util::getHomeDir() {
+#if defined(_WIN32)
+  char buf[MAX_PATH] = {0};
+  if (GetEnvironmentVariableA("USERPROFILE", buf, MAX_PATH) > 0) return std::string(buf);
+  char drive[MAX_PATH] = {0}, path[MAX_PATH] = {0};
+  if (GetEnvironmentVariableA("HOMEDRIVE", drive, MAX_PATH) > 0 &&
+      GetEnvironmentVariableA("HOMEPATH", path, MAX_PATH) > 0)
+    return std::string(drive) + std::string(path);
+  return std::string();
+#else
   // parse implicit paths
   const char* homedir = 0;
   char* buf = 0;
@@ -227,10 +274,21 @@ std::string util::getHomeDir() {
   if (buf) free(buf);
 
   return ret;
+#endif
 }
 
 // _____________________________________________________________________________
 std::string util::getTmpDir() {
+#if defined(_WIN32)
+  char buf[MAX_PATH] = {0};
+  DWORD n = GetTempPathA(MAX_PATH, buf);
+  if (n > 0 && n < MAX_PATH) {
+    std::string s(buf);
+    if (!s.empty() && (s.back() == '\\' || s.back() == '/')) s.pop_back();
+    return s;
+  }
+  return ".";
+#else
   // first, check if an env variable is set
   const char* tmpdir = getenv("TMPDIR");
   if (tmpdir && std::strlen(tmpdir)) return std::string(tmpdir);
@@ -243,6 +301,7 @@ std::string util::getTmpDir() {
 
   // lastly, return the users home directory as a fallback
   return getHomeDir();
+#endif
 }
 
 // ___________________________________________________________________________
