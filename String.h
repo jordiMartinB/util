@@ -361,13 +361,27 @@ inline std::string normalizeWhiteSpace(const std::string& input) {
 
 // _____________________________________________________________________________
 inline std::wstring toWStr(const std::string& str) {
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
   return converter.from_bytes(str);
 }
 
 // _____________________________________________________________________________
 inline std::string toNStr(const std::wstring& wstr) {
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
   std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
   return converter.to_bytes(wstr);
 }
 
