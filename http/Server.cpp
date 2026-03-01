@@ -11,11 +11,22 @@
   #include <winsock2.h>
   #include <ws2tcpip.h>
   #pragma comment(lib, "Ws2_32.lib")
+  #define socket_close(s)     closesocket(s)
+  #define socket_read(s,b,l)  recv(s, (char*)(b), static_cast<int>(l), 0)
+  #ifndef NOMINMAX
+    #define NOMINMAX
+  #endif
+  using socket_t = SOCKET;
+  static constexpr socket_t INVALID_SOCK = INVALID_SOCKET;
 #else
   #include <sys/socket.h>
   #include <netinet/in.h>
   #include <arpa/inet.h>
   #include <unistd.h>
+  #define socket_close(s)     close(s)
+  #define socket_read(s,b,l)  read(s, b, l)
+  using socket_t = int;
+  static constexpr socket_t INVALID_SOCK = -1;
 #endif
 
 #include <signal.h>
@@ -67,7 +78,7 @@ Socket::Socket(int port) {
   _sock = socket(PF_INET, SOCK_STREAM, 0);
   if (_sock < 0)
     throw std::runtime_error(std::string("Could not create socket (") +
-                             std::strerror(errno) + ")");
+                             std::strerror_s(errno) + ")");
 
   struct sockaddr_in addr;
 
@@ -79,7 +90,7 @@ Socket::Socket(int port) {
   if (bind(_sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
     throw std::runtime_error(std::string("Could not bind to port ") +
                              std::to_string(port) + " (" +
-                             std::strerror(errno) + ")");
+                             std::strerror_s(errno) + ")");
   }
 }
 
@@ -93,7 +104,7 @@ Socket::~Socket() {
 int Socket::wait() {
   if (listen(_sock, BLOG) < 0)
     throw std::runtime_error(std::string("Cannot listen to socket (") +
-                             std::strerror(errno) + ")");
+                             std::strerror_s(errno) + ")");
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
   int sock = accept(_sock, reinterpret_cast<sockaddr*>(&cli_addr), &clilen);

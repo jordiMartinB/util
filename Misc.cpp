@@ -388,7 +388,7 @@ void util::sortPart(int file, size_t objSize, size_t part, unsigned char* buf,
   // read entire part to buf
   ssize_t n = preadAll(file, buf, bufferSize, bufferSize * part);
   if (n < 0) {
-    std::cerr << strerror(errno) << std::endl;
+    std::cerr << strerror_s(errno) << std::endl;
     return;
   }
 
@@ -398,7 +398,7 @@ void util::sortPart(int file, size_t objSize, size_t part, unsigned char* buf,
   // write entire part, now sorted, back to file, to the same position
   ssize_t r = pwriteAll(file, buf, n, bufferSize * part);
   if (r < 0) {
-    std::cerr << strerror(errno) << std::endl;
+    std::cerr << strerror_s(errno) << std::endl;
     return;
   }
 
@@ -663,13 +663,3 @@ size_t util::getCurrentRSS() {
   return (size_t)0L; /* Unsupported. */
 #endif
 }
-
-#ifdef _WIN32
-  // Use safe variant on Windows
-  static std::string safe_strerror(int errnum) {
-      char buf[256];
-      strerror_s(buf, sizeof(buf), errnum);
-      return std::string(buf);
-  }
-  #define strerror(e) safe_strerror(e).c_str()
-#endif
