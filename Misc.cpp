@@ -10,9 +10,10 @@
 # include <pwd.h>
 # include <unistd.h>
 #else
-# include <winsock2.h>
 # include <io.h>
-# define close(s) closesocket(s)
+# include <windows.h>
+# include <stdint.h>
+# include <sys/types.h>
 #endif
 
 #include <cmath>
@@ -47,7 +48,7 @@ static inline ssize_t pread(int fd, void* buf, size_t count, size_t offset) {
 #endif
 
 // cached first 10 powers of 10
-static int util_first_10_pow_10[10] = {1,      10,      100,      1000,      10000,
+static int pow10[10] = {1,      10,      100,      1000,      10000,
                         100000, 1000000, 10000000, 100000000, 1000000000};
 
 // _____________________________________________________________________________
@@ -123,7 +124,7 @@ double util::atof(const char* p, uint8_t mn) {
     }
 
     if (n < 10) {
-      ret += f / util_first_10_pow_10[n];
+      ret += f / pow10[n];
     } else {
       double res = 1;
       double base = 10;
@@ -171,7 +172,7 @@ ssize_t util::zreadAll(gzFile file, unsigned char* buf, size_t count) {
 #endif
 
 // _____________________________________________________________________________
-#ifdef PBUTIL_BZLIB_FOUND
+#ifdef PBUTIL_BZIP2_FOUND
 ssize_t util::bz2readAll(BZFILE* file, unsigned char* buf, size_t count) {
   ssize_t r;
   ssize_t rem = count;
@@ -371,13 +372,7 @@ void util::sortPart(int file, size_t objSize, size_t part, unsigned char* buf,
   // read entire part to buf
   ssize_t n = preadAll(file, buf, bufferSize, bufferSize * part);
   if (n < 0) {
-    #ifdef _WIN32
-      char errBuf[256];
-      strerror_s(errBuf, sizeof(errBuf), errno);
-      std::cerr << errBuf << std::endl;
-    #else
-      std::cerr << strerror(errno) << std::endl;
-    #endif
+    std::cerr << strerror(errno) << std::endl;
     return;
   }
 
@@ -387,13 +382,7 @@ void util::sortPart(int file, size_t objSize, size_t part, unsigned char* buf,
   // write entire part, now sorted, back to file, to the same position
   ssize_t r = pwriteAll(file, buf, n, bufferSize * part);
   if (r < 0) {
-    #ifdef _WIN32
-      char errBuf[256];
-      strerror_s(errBuf, sizeof(errBuf), errno);
-      std::cerr << errBuf << std::endl;
-    #else
-      std::cerr << strerror(errno) << std::endl;
-    #endif
+    std::cerr << strerror(errno) << std::endl;
     return;
   }
 
@@ -501,11 +490,7 @@ ssize_t util::externalSort(int file, int newFile, size_t size, size_t numobjs,
 
     // we have reached the end of the parts buffer, re-fill
     if (partpos[smallestP] % partsBufSize == 0) {
-      #ifdef _WIN32
-        _lseek(file, static_cast<long>(bufferSize * smallestP + partpos[smallestP]), SEEK_SET);
-      #else
-        lseek(file, bufferSize * smallestP + partpos[smallestP], SEEK_SET);
-      #endif
+      lseek(file, bufferSize * smallestP + partpos[smallestP], SEEK_SET);
       ssize_t r = readAll(file, partbufs[smallestP], partsBufSize);
       if (r < 0) return -1;
     }

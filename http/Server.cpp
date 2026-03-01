@@ -7,20 +7,23 @@
 #endif
 
 #include <fcntl.h>
-#ifdef _WIN32
-  #include <winsock2.h>
-  #include <io.h>
-  #define close(s) closesocket(s)
+#if !defined(_WIN32) && !defined(__MINGW32__)
+#  include <sys/socket.h>
+#  include <netinet/in.h>
+#  include <arpa/inet.h>
+#  include <netdb.h>
+#  include <unistd.h>
+#  include <signal.h>
 #else
-  #include <unistd.h>
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
+#  include <windows.h>
+typedef int socklen_t;
 #endif
 
-#include <signal.h>
 #include <algorithm>
 #include <csignal>
 #include <cerrno>
-#include <cstring>
-#include <limits>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -63,13 +66,8 @@ Socket::Socket(int port) {
 
   _sock = socket(PF_INET, SOCK_STREAM, 0);
   if (_sock < 0)
-  #ifdef _WIN32
-    throw std::runtime_error(std::string("Could not create socket (") +
-                             std::strerror_s(errno) + ")");
-  #else
     throw std::runtime_error(std::string("Could not create socket (") +
                              std::strerror(errno) + ")");
-  #endif
 
   struct sockaddr_in addr;
 
@@ -79,28 +77,20 @@ Socket::Socket(int port) {
   memset(&(addr.sin_zero), '\0', 8);
 
   if (bind(_sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
-  #ifdef _WIN32
-    throw std::runtime_error(std::string("Could not bind to port ") +
-                             std::to_string(port) + " (" +
-                             std::strerror_s(errno) + ")");
-  #else
     throw std::runtime_error(std::string("Could not bind to port ") +
                              std::to_string(port) + " (" +
                              std::strerror(errno) + ")");
-  #endif
+  }
 }
 
 // _____________________________________________________________________________
-Socket::~Socket() {
-  socket_close(_sock);
-  _sock = INVALID_SOCK;         // Reset to sentinel value
-}
+Socket::~Socket() { close(_sock); }
 
 // _____________________________________________________________________________
 int Socket::wait() {
   if (listen(_sock, BLOG) < 0)
     throw std::runtime_error(std::string("Cannot listen to socket (") +
-                             std::strerror_s(errno) + ")");
+                             std::strerror(errno) + ")");
   sockaddr_in cli_addr;
   socklen_t clilen = sizeof(cli_addr);
   int sock = accept(_sock, reinterpret_cast<sockaddr*>(&cli_addr), &clilen);
