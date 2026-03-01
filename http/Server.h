@@ -14,7 +14,9 @@
 #include <unordered_map>
 #include <vector>
 
-#include <unistd.h>
+#ifndef _WIN32
+  #include <unistd.h>
+#endif
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>

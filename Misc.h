@@ -278,6 +278,7 @@ ssize_t bz2readAll(BZFILE* file, unsigned char* buf, size_t count);
 
 ssize_t readAll(int file, unsigned char* buf, size_t count);
 
+
 ssize_t pwriteAll(int file, const unsigned char* buf, size_t count,
                   size_t offset);
 

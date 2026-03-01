@@ -6,7 +6,10 @@
 #define UTIL_STRING_H_
 
 #include <stdint.h>
-#include <unistd.h>
+
+#ifndef _WIN32
+  #include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <bitset>
