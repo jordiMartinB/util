@@ -388,7 +388,13 @@ void util::sortPart(int file, size_t objSize, size_t part, unsigned char* buf,
   // read entire part to buf
   ssize_t n = preadAll(file, buf, bufferSize, bufferSize * part);
   if (n < 0) {
-    std::cerr << strerror_s(errno) << std::endl;
+    #ifdef _WIN32
+      char errBuf[256];
+      strerror_s(errBuf, sizeof(errBuf), errno);
+      std::cerr << errBuf << std::endl;
+    #else
+      std::cerr << strerror(errno) << std::endl;
+    #endif
     return;
   }
 
@@ -398,7 +404,13 @@ void util::sortPart(int file, size_t objSize, size_t part, unsigned char* buf,
   // write entire part, now sorted, back to file, to the same position
   ssize_t r = pwriteAll(file, buf, n, bufferSize * part);
   if (r < 0) {
-    std::cerr << strerror_s(errno) << std::endl;
+    #ifdef _WIN32
+      char errBuf[256];
+      strerror_s(errBuf, sizeof(errBuf), errno);
+      std::cerr << errBuf << std::endl;
+    #else
+      std::cerr << strerror(errno) << std::endl;
+    #endif
     return;
   }
 
@@ -506,7 +518,11 @@ ssize_t util::externalSort(int file, int newFile, size_t size, size_t numobjs,
 
     // we have reached the end of the parts buffer, re-fill
     if (partpos[smallestP] % partsBufSize == 0) {
-      lseek(file, bufferSize * smallestP + partpos[smallestP], SEEK_SET);
+      #ifdef _WIN32
+        _lseek(file, static_cast<long>(bufferSize * smallestP + partpos[smallestP]), SEEK_SET);
+      #else
+        lseek(file, bufferSize * smallestP + partpos[smallestP], SEEK_SET);
+      #endif
       ssize_t r = readAll(file, partbufs[smallestP], partsBufSize);
       if (r < 0) return -1;
     }
@@ -557,109 +573,4 @@ std::string util::getTmpFName(std::string dir, std::string name,
 
   while (access(f.c_str(), F_OK) != -1) {
     c++;
-    if (c > 10000) {
-      // giving up...
-      std::cerr << "Could not create temporary file!" << std::endl;
-      exit(1);
-    }
-    f = dir + name + postf + "." + std::to_string(getpid()) + "." +
-        randomString(15);
-  }
-
-  return f;
-}
-
-/*
- * Author:  David Robert Nadeau
- * Site:    http://NadeauSoftware.com/
- * License: Creative Commons Attribution 3.0 Unported License
- *          http://creativecommons.org/licenses/by/3.0/deed.en_US
- */
-
-/**
- * Returns the peak (maximum so far) resident set size (physical
- * memory use) measured in bytes, or zero if the value cannot be
- * determined on this OS.
- */
-
-// _____________________________________________________________________________
-size_t util::getPeakRSS() {
-#if defined(_WIN32)
-  /* Windows -------------------------------------------------- */
-  PROCESS_MEMORY_COUNTERS info;
-  GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
-  return (size_t)info.PeakWorkingSetSize;
-
-#elif (defined(_AIX) || defined(__TOS__AIX__)) || \
-    (defined(__sun__) || defined(__sun) ||        \
-     defined(sun) && (defined(__SVR4) || defined(__svr4__)))
-  /* AIX and Solaris ------------------------------------------ */
-  struct psinfo psinfo;
-  int fd = -1;
-  if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
-    return (size_t)0L; /* Can't open? */
-  if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo)) {
-    close(fd);
-    return (size_t)0L; /* Can't read? */
-  }
-  close(fd);
-  return (size_t)(psinfo.pr_rssize * 1024L);
-
-#elif defined(__unix__) || defined(__unix) || defined(unix) || \
-    (defined(__APPLE__) && defined(__MACH__))
-  /* BSD, Linux, and OSX -------------------------------------- */
-  struct rusage rusage;
-  getrusage(RUSAGE_SELF, &rusage);
-#if defined(__APPLE__) && defined(__MACH__)
-  return (size_t)rusage.ru_maxrss;
-#else
-  return (size_t)(rusage.ru_maxrss * 1024L);
-#endif
-
-#else
-  /* Unknown OS ----------------------------------------------- */
-  return (size_t)0L; /* Unsupported. */
-#endif
-}
-
-/*
- * Returns the current resident set size (physical memory use) measured
- * in bytes, or zero if the value cannot be determined on this OS.
- */
-
-// _____________________________________________________________________________
-size_t util::getCurrentRSS() {
-#if defined(_WIN32)
-  /* Windows -------------------------------------------------- */
-  PROCESS_MEMORY_COUNTERS info;
-  GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
-  return (size_t)info.WorkingSetSize;
-
-#elif defined(__APPLE__) && defined(__MACH__)
-  /* OSX ------------------------------------------------------ */
-  struct mach_task_basic_info info;
-  mach_msg_type_number_t infoCount = MACH_TASK_BASIC_INFO_COUNT;
-  if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info,
-                &infoCount) != KERN_SUCCESS)
-    return (size_t)0L; /* Can't access? */
-  return (size_t)info.resident_size;
-
-#elif defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-  /* Linux ---------------------------------------------------- */
-  long rss = 0L;
-  FILE* fp = NULL;
-  if ((fp = fopen("/proc/self/statm", "r")) == NULL)
-    return (size_t)0L; /* Can't open? */
-  if (fscanf(fp, "%*s%ld", &rss) != 1) {
-    fclose(fp);
-    return (size_t)0L; /* Can't read? */
-  }
-  fclose(fp);
-  return (size_t)rss * (size_t)sysconf(_SC_PAGESIZE);
-
-#else
-  /* AIX, BSD, Solaris, and Unknown OS ------------------------ */
-  return (size_t)0L; /* Unsupported. */
-#endif
-}
+    if

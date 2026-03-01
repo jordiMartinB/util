@@ -77,8 +77,13 @@ Socket::Socket(int port) {
 
   _sock = socket(PF_INET, SOCK_STREAM, 0);
   if (_sock < 0)
+  #ifdef _WIN32
     throw std::runtime_error(std::string("Could not create socket (") +
                              std::strerror_s(errno) + ")");
+  #else
+    throw std::runtime_error(std::string("Could not create socket (") +
+                             std::strerror(errno) + ")");
+  #endif
 
   struct sockaddr_in addr;
 
@@ -88,10 +93,15 @@ Socket::Socket(int port) {
   memset(&(addr.sin_zero), '\0', 8);
 
   if (bind(_sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
+  #ifdef _WIN32
     throw std::runtime_error(std::string("Could not bind to port ") +
                              std::to_string(port) + " (" +
                              std::strerror_s(errno) + ")");
-  }
+  #else
+    throw std::runtime_error(std::string("Could not bind to port ") +
+                             std::to_string(port) + " (" +
+                             std::strerror(errno) + ")");
+  #endif
 }
 
 // _____________________________________________________________________________
