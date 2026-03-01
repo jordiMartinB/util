@@ -25,7 +25,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
+#if defined(_MSC_VER)
+  #include <cwctype>  // for std::iswalnum on MSVC
+#endif
 namespace util {
 
 // _____________________________________________________________________________

@@ -10,6 +10,26 @@
 #include <utility>
 #include <vector>
 
+#if defined(_MSC_VER)
+#include <intrin.h>
+namespace radix_heap {
+namespace internal {
+  inline int clz32(unsigned int x) {
+    unsigned long index;
+    _BitScanReverse(&index, x);
+    return 31 - (int)index;
+  }
+  inline int clz64(unsigned long long x) {
+    unsigned long index;
+    _BitScanReverse64(&index, x);
+    return 63 - (int)index;
+  }
+}
+}
+#define __builtin_clz(x)   radix_heap::internal::clz32(x)
+#define __builtin_clzll(x) radix_heap::internal::clz64(x)
+#endif
+
 namespace radix_heap {
 namespace internal {
 template <bool Is64bit>
