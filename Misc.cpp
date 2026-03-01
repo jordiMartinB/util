@@ -14,6 +14,22 @@
 # include <windows.h>
 # include <stdint.h>
 # include <sys/types.h>
+# include <process.h>  // _getpid()
+
+  // Map POSIX access() constants to Windows equivalents
+  #ifndef F_OK
+    #define F_OK 0
+  #endif
+  #ifndef W_OK
+    #define W_OK 2
+  #endif
+  #ifndef R_OK
+    #define R_OK 4
+  #endif
+
+  // Map POSIX function names to Windows equivalents
+  #define access  _access
+  #define getpid  _getpid
 #endif
 
 #include <cmath>
@@ -647,3 +663,13 @@ size_t util::getCurrentRSS() {
   return (size_t)0L; /* Unsupported. */
 #endif
 }
+
+#ifdef _WIN32
+  // Use safe variant on Windows
+  static std::string safe_strerror(int errnum) {
+      char buf[256];
+      strerror_s(buf, sizeof(buf), errnum);
+      return std::string(buf);
+  }
+  #define strerror(e) safe_strerror(e).c_str()
+#endif

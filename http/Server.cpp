@@ -10,34 +10,14 @@
 #ifdef _WIN32
   #include <winsock2.h>
   #include <ws2tcpip.h>
-  #pragma comment(lib, "ws2_32.lib")
-
-  // Map POSIX socket calls to Windows equivalents
-  #define socket_close(s)     closesocket(s)
-  #define socket_read(s,b,l)  recv(s, b, static_cast<int>(l), 0)
-
-  // Suppress the min/max macro interference
-  #ifndef NOMINMAX
-    #define NOMINMAX
-  #endif
-
-  using socket_t = SOCKET;
-  static constexpr socket_t INVALID_SOCK = INVALID_SOCKET;
-
+  #pragma comment(lib, "Ws2_32.lib")
 #else
-  #include <unistd.h>  // close(), read()
-
-  #define socket_close(s)     close(s)
-  #define socket_read(s,b,l)  read(s, b, l)
-
-  using socket_t = int;
-  static constexpr socket_t INVALID_SOCK = -1;
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <unistd.h>
 #endif
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <signal.h>
 #include <algorithm>
 #include <csignal>
