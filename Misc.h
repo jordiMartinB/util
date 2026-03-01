@@ -34,6 +34,8 @@
 #    define NOMINMAX
 #  endif
 #include <windows.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #endif
 
 
