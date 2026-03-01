@@ -9,24 +9,10 @@
 #include <fcntl.h>
 #ifdef _WIN32
   #include <winsock2.h>
-  #include <ws2tcpip.h>
-  #pragma comment(lib, "Ws2_32.lib")
-  #define socket_close(s)     closesocket(s)
-  #define socket_read(s,b,l)  recv(s, (char*)(b), static_cast<int>(l), 0)
-  #ifndef NOMINMAX
-    #define NOMINMAX
-  #endif
-  using socket_t = SOCKET;
-  static constexpr socket_t INVALID_SOCK = INVALID_SOCKET;
+  #include <io.h>
+  #define close(s) closesocket(s)
 #else
-  #include <sys/socket.h>
-  #include <netinet/in.h>
-  #include <arpa/inet.h>
   #include <unistd.h>
-  #define socket_close(s)     close(s)
-  #define socket_read(s,b,l)  read(s, b, l)
-  using socket_t = int;
-  static constexpr socket_t INVALID_SOCK = -1;
 #endif
 
 #include <signal.h>
