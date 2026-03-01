@@ -14,6 +14,13 @@
 # include <windows.h>
 # include <stdint.h>
 # include <sys/types.h>
+// POSIX access() constants not defined in MSVC headers
+# ifndef W_OK
+#   define W_OK 2
+# endif
+# ifndef F_OK
+#   define F_OK 0
+# endif
 #endif
 
 #include <cmath>

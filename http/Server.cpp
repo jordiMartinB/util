@@ -18,7 +18,11 @@
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <windows.h>
+#  include <io.h>
 typedef int socklen_t;
+// Map POSIX names to their Windows equivalents
+#  define close(fd)      _close(fd)
+#  define read(fd,b,n)   _read((fd),(b),(unsigned int)(n))
 #endif
 
 #include <algorithm>
