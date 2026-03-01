@@ -7,22 +7,35 @@
 #endif
 
 #include <fcntl.h>
-#if !defined(_WIN32) && !defined(__MINGW32__)
-#  include <sys/socket.h>
-#  include <netinet/in.h>
-#  include <arpa/inet.h>
-#  include <netdb.h>
-#  include <unistd.h>
-#  include <signal.h>
-#else
+#ifdef _WIN32
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  include <windows.h>
 #  include <io.h>
-typedef int socklen_t;
-// Map POSIX names to their Windows equivalents
-#  define close(fd)      _close(fd)
-#  define read(fd,b,n)   _read((fd),(b),(unsigned int)(n))
+// Do NOT use macros for read/close - they break STL headers.
+// Instead provide inline wrapper functions used only in this file.
+namespace win_compat {
+  inline int sock_close(int fd) { return ::_close(fd); }
+  inline int sock_read(int fd, void* buf, unsigned int n) { return ::_read(fd, buf, n); }
+}
+using win_compat::sock_close;
+using win_compat::sock_read;
+#else
+#  include <unistd.h>
+#  include <sys/socket.h>
+#  include <netinet/in.h>
+#  include <arpa/inet.h>
+#  include <netdb.h>
+#  include <signal.h>
+namespace win_compat {
+  inline int sock_close(int fd) { return ::close(fd); }
+  inline int sock_read(int fd, void* buf, unsigned int n) { return ::read(fd, buf, (size_t)n); }
+}
+using win_compat::sock_close;
+using win_compat::sock_read;
 #endif
 
 #include <algorithm>
