@@ -14,12 +14,6 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#ifdef PBUTIL_ZLIB_FOUND
-#include <zlib.h>
-#endif
-#ifdef PBUTIL_BZLIB_FOUND
-#include <bzlib.h>
-#endif
 #include <sys/types.h>
 #include "JobQueue.h"
 
@@ -269,14 +263,6 @@ std::string formatFloat(double f, int DIGITS);
 double atof(const char* p, uint8_t mn);
 
 ssize_t preadAll(int file, unsigned char* buf, size_t count, size_t offset);
-
-#ifdef PBUTIL_ZLIB_FOUND
-ssize_t zreadAll(gzFile file, unsigned char* buf, size_t count);
-#endif
-
-#ifdef PBUTIL_BZLIB_FOUND
-ssize_t bz2readAll(BZFILE* file, unsigned char* buf, size_t count);
-#endif
 
 ssize_t readAll(int file, unsigned char* buf, size_t count);
 

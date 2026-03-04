@@ -164,38 +164,6 @@ ssize_t util::preadAll(int file, unsigned char* buf, size_t count,
 }
 
 // _____________________________________________________________________________
-#ifdef PBUTIL_ZLIB_FOUND
-ssize_t util::zreadAll(gzFile file, unsigned char* buf, size_t count) {
-  ssize_t r;
-  ssize_t rem = count;
-
-  while ((r = gzread(file, buf + (count - rem), rem))) {
-    if (r < 0) return -1;
-    rem -= r;
-  }
-
-  return count - rem;
-}
-#endif
-
-// _____________________________________________________________________________
-#ifdef PBUTIL_BZIP2_FOUND
-ssize_t util::bz2readAll(BZFILE* file, unsigned char* buf, size_t count) {
-  ssize_t r;
-  ssize_t rem = count;
-
-  int err;
-
-  while ((r = BZ2_bzRead(&err, file, buf + (count - rem), rem))) {
-    if (r < 0) return -1;
-    rem -= r;
-  }
-
-  return count - rem;
-}
-#endif
-
-// _____________________________________________________________________________
 ssize_t util::readAll(int file, unsigned char* buf, size_t count) {
   ssize_t r;
   ssize_t rem = count;
