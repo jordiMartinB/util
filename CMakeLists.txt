@@ -8,27 +8,6 @@ target_include_directories(util_objects PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
 )
 
-# Link BZip2 if found
-if (NOT BZIP2_FOUND)
-    find_package(BZip2)
-endif()
-
-if (BZIP2_FOUND)
-    target_compile_definitions(util_objects INTERFACE DPBUTIL_BZIP2_FOUND=${BZIP2_FOUND} )
-    target_include_directories(util_objects INTERFACE ${BZIP2_INCLUDE_DIR} )
-    target_link_libraries(util_objects PUBLIC ${BZIP2_LIBRARIES})
-endif()
-
-if (NOT ZLIB_FOUND)
-    find_package(ZLIB)
-endif()
-
-if (ZLIB_FOUND)
-    target_compile_definitions(util_objects INTERFACE DPBUTIL_ZLIB_FOUND=${ZLIB_FOUND} )
-    target_include_directories(util_objects INTERFACE ${ZLIB_INCLUDE_DIRS} )
-    target_link_libraries(util_objects PUBLIC ${ZLIB_LIBRARIES})
-endif()
-
 if(CMAKE_TESTING_ENABLED)
     add_subdirectory(tests)
 endif()
